@@ -38,7 +38,7 @@ Each repository checkpoint records:
 - short notes or planning context
 
 `phase` and `waiting_actor` must not be collapsed. A repo can be in
-`codex_plan_ready` while waiting on `user`, or in `ci_pending` while waiting on
+`agent_plan_ready` while waiting on `user`, or in `ci_pending` while waiting on
 `ci`.
 
 ## Optional Signals
