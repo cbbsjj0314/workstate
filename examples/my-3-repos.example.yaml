@@ -1,0 +1,53 @@
+# Example dogfooding checkpoint file.
+# This file shows around three repositories because that is the current setup.
+# WorkState supports N repositories; add as many repository entries as needed.
+
+version: 1
+repositories:
+  - id: info-drip
+    path: /Users/huhzz/Project/info-drip
+    work_item: "Improve iPad quick-action planning flow"
+    phase: agent_plan_ready
+    waiting_actor: user
+    next_action: "Review the Codex plan and decide whether to apply it."
+    last_checkpoint: "2026-06-04T21:30:00+09:00"
+    notes: "Planning session has scoped the ticket; implementation has not started."
+    external_signals:
+      github_pr: null
+      ci_status: null
+      review_status: null
+      git:
+        branch: feat/ipad-quick-actions
+        dirty: unknown
+
+  - id: driftlens
+    path: /Users/huhzz/Project/driftlens
+    work_item: "Optional LLM dependency packaging"
+    phase: ci_pending
+    waiting_actor: ci
+    next_action: "Wait for CI result, then review failure or merge readiness."
+    last_checkpoint: "2026-06-04T20:10:00+09:00"
+    notes: "PR-native workflow is active for this repository."
+    external_signals:
+      github_pr: "https://github.com/example/driftlens/pull/123"
+      ci_status: pending
+      review_status: approved
+      git:
+        branch: feat/optional-llm
+        dirty: false
+
+  - id: workstate
+    path: /Users/huhzz/Project/workstate
+    work_item: "Initial product contract"
+    phase: needs_ticket
+    waiting_actor: user
+    next_action: "Create the next implementation ticket after the docs PR lands."
+    last_checkpoint: "2026-06-04T22:00:00+09:00"
+    notes: "Docs-only product contract is the first PR."
+    external_signals:
+      github_pr: null
+      ci_status: null
+      review_status: null
+      git:
+        branch: main
+        dirty: false
