@@ -1,0 +1,130 @@
+name: Docs Validation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  docs:
+    name: Validate docs and examples
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Check forbidden legacy product name
+        run: |
+          set -euo pipefail
+
+          mapfile -t files < <(
+            git ls-files README.md 'docs/**' 'examples/**'
+          )
+
+          if ((${#files[@]} == 0)); then
+            echo "No docs or example files found."
+            exit 1
+          fi
+
+          if grep -n --fixed-strings "DevState" "${files[@]}"; then
+            echo "Found forbidden legacy product name: DevState"
+            exit 1
+          fi
+
+          echo "DevState check ok"
+
+      - name: Check core question is documented
+        run: |
+          set -euo pipefail
+
+          mapfile -t files < <(
+            git ls-files README.md 'docs/**'
+          )
+
+          if ((${#files[@]} == 0)); then
+            echo "No README.md or docs files found."
+            exit 1
+          fi
+
+          if ! grep -n --fixed-strings "What is waiting for whom" "${files[@]}"; then
+            echo "Missing required core question: What is waiting for whom"
+            exit 1
+          fi
+
+          echo "core question check ok"
+
+      - name: Parse example YAML
+        run: |
+          set -euo pipefail
+
+          ruby -e 'require "yaml"; YAML.load_file("examples/my-3-repos.example.yaml"); puts "yaml ok"'
+
+      - name: Check line endings and hidden formatting characters
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          result = subprocess.run(
+              [
+                  "git",
+                  "ls-files",
+                  "README.md",
+                  "docs/*.md",
+                  "docs/**/*.md",
+                  "examples/*.yaml",
+                  "examples/**/*.yaml",
+                  "examples/*.yml",
+                  "examples/**/*.yml",
+              ],
+              check=True,
+              text=True,
+              capture_output=True,
+          )
+
+          paths = [Path(line) for line in result.stdout.splitlines() if line]
+
+          if not paths:
+              raise SystemExit("No docs or example files found.")
+
+          forbidden_codepoints = set(range(0x202A, 0x202F))
+          forbidden_codepoints.update(range(0x2066, 0x206A))
+          forbidden_codepoints.update({0x200E, 0x200F})
+
+          errors = []
+
+          for path in paths:
+              data = path.read_bytes()
+
+              for index, byte in enumerate(data):
+                  if byte == 0x0D:
+                      errors.append(f"{path}: contains carriage return byte at byte {index}")
+                  elif byte < 0x20 and byte not in (0x09, 0x0A):
+                      errors.append(
+                          f"{path}: contains ASCII control byte 0x{byte:02X} at byte {index}"
+                      )
+
+              try:
+                  text = data.decode("utf-8")
+              except UnicodeDecodeError as exc:
+                  errors.append(f"{path}: is not valid UTF-8: {exc}")
+                  continue
+
+              for line_no, line in enumerate(text.splitlines(), start=1):
+                  for col_no, char in enumerate(line, start=1):
+                      codepoint = ord(char)
+                      if codepoint in forbidden_codepoints:
+                          errors.append(
+                              f"{path}:{line_no}:{col_no}: contains forbidden Unicode "
+                              f"formatting character U+{codepoint:04X}"
+                          )
+
+          if errors:
+              raise SystemExit("\n".join(errors))
+
+          print("line endings/control characters ok")
+          PY
