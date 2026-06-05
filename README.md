@@ -1,65 +1,62 @@
 # WorkState
 
-WorkState is a local-first CLI contract for tracking workflow state across
-multiple personal repositories.
+WorkState is a local-first workflow recovery tool for personal repositories.
 
-The central question is:
+It is designed to automatically capture observable workflow events where
+integrations permit, calculate repository snapshots from those facts, and show
+derived workflow status during resume.
+
+The central resume question remains:
 
 > What is waiting for whom?
 
-WorkState is not primarily about recent commits, file changes, or coding time.
-It is about recovering repo-specific workflow state after stepping away for
-hours, sleeping, or going to work.
+That answer is derived from observed events and repository snapshots. It is not
+intended to be a manually maintained source-of-truth field.
 
-## Product Definition
+## Product Direction
 
-WorkState tracks the current work item for each repository, where that work is
-in the workflow, who must act next, and the next action needed to resume.
+WorkState should help a user recover:
 
-It is designed for N repositories. The current dogfooding setup may use around
-three repositories, but the product model must not be hard-coded to three.
+- what happened recently
+- what remains in the local working tree
+- what has or has not been committed
+- whether the branch was pushed
+- whether a PR exists
+- validation and CI status
+- whether any execution is active
+- which actor last worked
+- whose attention is likely needed
+- which interpretations still require confirmation
+
+Manual checkpointing remains available as fallback or repair when automatic
+capture is missing, incomplete, or wrong. It is not the intended primary UX.
 
 ## Core Model
 
-Core workflow state:
+WorkState separates four layers:
 
-- repository identity
-- current work item
-- current phase
-- waiting actor / next actor
-- next action
-- last checkpoint
-- short notes or planning context
+- observed events: objective facts captured from integrations or local tools
+- repository snapshot: deterministic current repository state
+- derived workflow state: inferred workflow meaning with evidence and confidence
+- optional recommendation: suggested next action, never an objective fact
 
-`phase` and `waiting actor / next actor` are distinct. `phase` describes the
-current state of the work item. `waiting actor / next actor` describes who must
-act next.
+The current dogfooding setup may use around three repositories, but WorkState is
+designed for N repositories. The model must not be hard-coded to ChatGPT, Codex,
+GitHub, CI, PRs, or the current dogfooding count.
 
-Optional external signals:
+## Current Status
 
-- GitHub PR
-- CI status
-- review status
-- Git branch or dirty state
-- external system status
-
-PR, CI, GitHub, review, and Git state are useful signals or gates in some
-workflows. They are not mandatory core workflow state.
-
-## MVP Direction
-
-- Local-first CLI
-- Manual checkpoint first
-- Multi-repo resume view
-- YAML/JSON storage first
-- Optional Git/GitHub adapter later
-- No automatic ChatGPT/Codex scraping in the MVP
+This repository currently contains a product contract. It does not implement
+ChatGPT, Codex, Git, GitHub, CI, event capture, CLI runtime, or persistence
+integrations yet. M0 will validate integration feasibility before the final
+schema and implementation details are locked.
 
 ## Docs
 
 - [Problem](docs/01-problem.md)
 - [Workflow model](docs/02-workflow-model.md)
-- [State machine](docs/03-state-machine.md)
+- [Event and snapshot model](docs/03-event-and-snapshot-model.md)
 - [CLI contract](docs/04-cli-contract.md)
 - [MVP scope](docs/05-mvp-scope.md)
+- [Product principles](docs/06-product-principles.md)
 - [ADRs](docs/adr)
