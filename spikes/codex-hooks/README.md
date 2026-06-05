@@ -166,31 +166,61 @@ hooks = false
 5. Allow the turn to stop normally.
 6. Inspect the JSONL outside the repository.
 7. Verify event ordering and `session_id`/`turn_id` correlation where provided.
-8. Verify `permission_mode: plan` is observed during a plan-mode turn.
+8. Inspect whether Plan mode is observable in hook payloads, including whether
+   `permission_mode` differs from Default mode.
 9. Verify raw prompt and assistant content are absent.
 10. Record the result below.
 
 ## Spike Results
 
-Live Codex verification: pending.
+Live Codex verification was completed against:
 
-This spike must not be considered successful, merged, or used to close its
-tracking issue until a real Codex dogfooding session verifies:
+```text
+codex-cli 0.137.0
+```
 
-- `SessionStart` is captured.
-- `UserPromptSubmit` is captured.
-- `PostToolUse` is captured for `apply_patch` or its supported alias.
-- `Stop` is captured.
-- session and turn IDs correlate where officially available.
-- `permission_mode: plan` is observed during a plan-mode turn.
-- the turn stops normally.
-- the hook does not cause material workflow delay.
-- JSONL is written outside the repository.
-- raw prompt and assistant content are absent.
+### Confirmed Capabilities
+
+- All four configured lifecycle event types were observed:
+  `SessionStart`, `UserPromptSubmit`, `PostToolUse`, and `Stop`.
+- Multiple events from one session shared the same `session_id`.
+- Separate turns had distinct `turn_id` values.
+- Turn-scoped events correlated correctly by `turn_id`.
+- `SessionStart` had no `turn_id`, as expected.
+- `PostToolUse` captured a file-edit operation as canonical
+  `tool_name: apply_patch`.
+- Additional `PostToolUse` events for `Bash` were captured.
+- JSONL was written outside the Git repository under the default
+  `~/.local/share/workstate/events/` location.
+- Raw-field inspection found none of these persisted raw fields: `prompt`,
+  `last_assistant_message`, `tool_input`, `tool_response`, `transcript`,
+  `transcript_path`, or `command`.
+- Both tested turns ended normally, and no hook-caused interruption was
+  observed.
+
+### Unmet Expectation / Limitation
+
+- Plan mode was tested twice, including an isolated retest.
+- In the isolated retest, the observed sequence was `SessionStart`,
+  `UserPromptSubmit`, and `Stop`.
+- The Codex UI was in Plan mode, but all observed Plan-mode records reported
+  `permission_mode: default`.
+- The earlier Plan-mode turn also reported `permission_mode: default`.
+- For `codex-cli 0.137.0`, this spike did not demonstrate that the hook payload
+  field `permission_mode` can distinguish Plan mode from Default mode.
+- The recorder preserves the supplied `permission_mode` value and does not
+  translate it.
+- Hook latency was not formally benchmarked.
+
+Codex lifecycle event capture feasibility was demonstrated. Reliable Plan-mode
+identification through `permission_mode` was not demonstrated. This is a
+partial-success result rather than proof of every original success criterion.
 
 ## Known Limitations
 
 - Fixture tests validate the recorder, not live Codex invocation behavior.
+- Live dogfooding did not validate reliable Plan-mode identification through
+  `permission_mode` in `codex-cli 0.137.0`.
 - `Bash` events are observed tool completions only; they do not imply file
   changes.
 - The schema is provisional and scoped to this spike.
