@@ -1,0 +1,25 @@
+name: Spike Python
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  spike-python:
+    name: Validate Codex hooks spike
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate hook configuration JSON
+        run: python3 -m json.tool .codex/hooks.json >/dev/null
+
+      - name: Compile Python files
+        run: python3 -m compileall spikes tests
+
+      - name: Run unit tests
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
