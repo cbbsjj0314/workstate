@@ -1,53 +1,174 @@
-# Example dogfooding checkpoint file.
-# This file shows around three repositories because that is the current setup.
-# WorkState supports N repositories; add as many repository entries as needed.
+# Conceptual WorkState dogfooding example.
+# This file demonstrates the intended hierarchy, not a final persisted schema.
+# The final schema will be validated during M0 and M1 implementation.
+# Three repositories are shown because that is a current dogfooding example.
+# WorkState supports N repositories; this file must not be treated as a limit.
 
 version: 1
 repositories:
   - id: info-drip
     path: /Users/huhzz/Project/info-drip
-    work_item: "Improve iPad quick-action planning flow"
-    phase: agent_plan_ready
-    waiting_actor: user
-    next_action: "Review the Codex plan and decide whether to apply it."
-    last_checkpoint: "2026-06-04T21:30:00+09:00"
-    notes: "Planning session has scoped the ticket; implementation has not started."
-    external_signals:
-      github_pr: null
-      ci_status: null
-      review_status: null
-      git:
-        branch: feat/ipad-quick-actions
-        dirty: unknown
+    recent_events:
+      - type: planning_prompt_created
+        certainty: observed
+        source: planning_session
+        observed_at: "2026-06-05T09:10:00+09:00"
+        summary: "Revision prompt prepared with a stable handoff ID."
+      - type: agent_turn_completed
+        certainty: observed
+        source: ai_agent
+        observed_at: "2026-06-05T09:35:00+09:00"
+        summary: "Agent turn finished; output type is captured separately."
+      - type: plan_output_observed
+        certainty: observed
+        source: ai_agent
+        observed_at: "2026-06-05T09:36:00+09:00"
+        summary: "Agent produced a plan for user review."
+    current_snapshot:
+      working_tree:
+        has_changes: false
+        changed_file_count: 0
+      commit:
+        latest_commit: null
+      remote:
+        pushed: false
+      pull_request:
+        exists: false
+      validation:
+        status: not_observed
+      execution:
+        active_actor: none
+        last_actor: ai_agent
+        last_event: agent_turn_completed
+    derived_workflow:
+      likely_waiting_for: user
+      confidence: high
+      evidence:
+        - kind: event
+          ref: agent_turn_completed
+        - kind: event
+          ref: plan_output_observed
+        - kind: snapshot
+          ref: validation.status
+          value: not_observed
+      interpretation_status: inferred
+    pending_interpretations:
+      - id: ws_interp_001
+        status: inferred
+        summary: "User likely needs to review the agent plan."
+        evidence:
+          - kind: event
+            ref: plan_output_observed
+    recommendation:
+      action: review_plan
+      source: rule
+      confidence: medium
 
   - id: driftlens
     path: /Users/huhzz/Project/driftlens
-    work_item: "Optional LLM dependency packaging"
-    phase: ci_pending
-    waiting_actor: ci
-    next_action: "Wait for CI result, then review failure or merge readiness."
-    last_checkpoint: "2026-06-04T20:10:00+09:00"
-    notes: "PR-native workflow is active for this repository."
-    external_signals:
-      github_pr: "https://github.com/example/driftlens/pull/123"
-      ci_status: pending
-      review_status: approved
-      git:
-        branch: feat/optional-llm
-        dirty: false
+    recent_events:
+      - type: file_changes_observed
+        certainty: observed
+        source: local_git
+        observed_at: "2026-06-05T10:20:00+09:00"
+        summary: "Documentation files changed locally."
+      - type: validation_passed
+        certainty: observed
+        source: local_tool
+        observed_at: "2026-06-05T10:45:00+09:00"
+        summary: "Local validation command completed successfully."
+    current_snapshot:
+      working_tree:
+        has_changes: true
+        changed_file_count: 3
+      commit:
+        latest_commit: null
+      remote:
+        pushed: false
+      pull_request:
+        exists: false
+      validation:
+        status: passed
+      execution:
+        active_actor: none
+        last_actor: user
+        last_event: validation_passed
+    derived_workflow:
+      likely_waiting_for: user
+      confidence: medium
+      evidence:
+        - kind: event
+          ref: file_changes_observed
+        - kind: event
+          ref: validation_passed
+        - kind: snapshot
+          ref: working_tree.has_changes
+          value: true
+      interpretation_status: inferred
+    pending_interpretations:
+      - id: ws_interp_002
+        status: inferred
+        summary: "User likely needs to commit or open a PR."
+        evidence:
+          - kind: event
+            ref: file_changes_observed
+          - kind: event
+            ref: validation_passed
+          - kind: snapshot
+            ref: commit.latest_commit
+            value: null
+          - kind: snapshot
+            ref: pull_request.exists
+            value: false
+    recommendation:
+      action: review_diff
+      source: rule
+      confidence: medium
 
   - id: workstate
     path: /Users/huhzz/Project/workstate
-    work_item: "Initial product contract"
-    phase: needs_ticket
-    waiting_actor: user
-    next_action: "Create the next implementation ticket after the docs PR lands."
-    last_checkpoint: "2026-06-04T22:00:00+09:00"
-    notes: "Docs-only product contract is the first PR."
-    external_signals:
-      github_pr: null
-      ci_status: null
-      review_status: null
-      git:
-        branch: main
-        dirty: false
+    recent_events:
+      - type: pr_created
+        certainty: observed
+        source: github
+        observed_at: "2026-06-05T11:15:00+09:00"
+        summary: "Docs-only product contract PR was opened."
+      - type: ci_pending
+        certainty: observed
+        source: github
+        observed_at: "2026-06-05T11:16:00+09:00"
+        summary: "Docs validation workflow started."
+    current_snapshot:
+      working_tree:
+        has_changes: false
+        changed_file_count: 0
+      commit:
+        latest_commit: "abc1234"
+      remote:
+        pushed: true
+      pull_request:
+        exists: true
+        status: open
+      validation:
+        status: pending
+      execution:
+        active_actor: ci
+        last_actor: github
+        last_event: ci_pending
+    derived_workflow:
+      likely_waiting_for: ci
+      confidence: high
+      evidence:
+        - kind: event
+          ref: pr_created
+        - kind: event
+          ref: ci_pending
+        - kind: snapshot
+          ref: validation.status
+          value: pending
+      interpretation_status: inferred
+    pending_interpretations: []
+    recommendation:
+      action: wait_for_ci
+      source: rule
+      confidence: high

@@ -1,48 +1,121 @@
 # Workflow Model
 
-WorkState models repo-level workflow state across N repositories.
+WorkState models repo-level workflow recovery across N repositories.
 
-The current dogfooding workflow is:
+The intended product behavior is automatic capture of observable workflow events
+where integrations permit. M0 has not yet validated those integrations, so this
+document describes the product contract, not current implementation capability.
 
-- ChatGPT acts as the master planning/control session.
-- Codex acts as a delegated implementation or planning worker.
-- The user decides next actions, creates tickets, delegates work, reviews plans
-  or PRs, checks CI, requests revisions, and merges.
-- The workflow is spec-driven, PR-native, and CI-gated when a repository uses
-  that workflow.
+## Actors And Adapters
 
-The core model remains tool-agnostic. It must also support local-only work,
-pre-PR work, plan-only AI output, non-GitHub workflows, and future non-Codex AI
-agent workflows.
-
-## Actors
+The core model remains adapter-agnostic.
 
 - `user`: the human operator deciding and approving work.
-- `planning_session`: the ChatGPT master/control session today; a generic
-  planning actor/session in future workflow profiles.
+- `planning_session`: ChatGPT today; a generic planning actor/session in future
+  workflow profiles.
 - `ai_agent`: Codex today, or another delegated AI agent later.
 - `ci`: automated checks when a workflow uses CI.
 - `reviewer`: a human or process responsible for review.
-- `external_system`: any non-core system that may provide a signal.
+- `external_system`: any non-core system that may provide an observable signal.
 
-## Core State
+ChatGPT, Codex, Git, GitHub, and CI are important intended integrations, but
+they are adapters. The core event model must not be permanently locked to those
+tools.
 
-Each repository checkpoint records:
+## Model Layers
 
-- repository identity
-- current work item
-- `phase`: the current state of the work item
-- `waiting_actor`: who must act next
-- `next_action`: the concrete resume action
-- last checkpoint time
-- short notes or planning context
+WorkState separates four layers.
 
-`phase` and `waiting_actor` must not be collapsed. A repo can be in
-`agent_plan_ready` while waiting on `user`, or in `ci_pending` while waiting on
-`ci`.
+1. Observed events
 
-## Optional Signals
+   Facts directly captured from integrations or local tools.
 
-External signals may include PR URL, CI result, review state, Git branch, dirty
-state, or external status. These signals can explain the current phase, but the
-core checkpoint must still be useful without them.
+   Examples:
+
+   - `planning_prompt_created`
+   - `agent_prompt_submitted`
+   - `agent_turn_completed`
+   - `plan_output_observed`
+   - `file_changes_observed`
+   - `commit_created`
+   - `branch_pushed`
+   - `pr_created`
+   - `pr_merged`
+   - `validation_started`
+   - `validation_passed`
+   - `validation_failed`
+   - `ci_pending`
+   - `ci_passed`
+   - `ci_failed`
+   - `agent_reported_complete`
+
+   Event names should describe observations, not semantic success. For example,
+   prefer `file_changes_observed` over `local_changes_applied`, and keep
+   `agent_reported_complete` separate from validation or work-item completion.
+
+2. Repository snapshot
+
+   A deterministic summary of current repository state calculated from observed
+   facts and local/tool inspection. Snapshot values are not events. For example,
+   `validation_not_observed` is a snapshot value, not an event.
+
+3. Derived workflow state
+
+   Workflow meaning inferred from events and snapshots. `likely_waiting_for` is
+   derived, with provenance, evidence, confidence, and interpretation status.
+
+4. Optional recommendation
+
+   A suggested next action. It must be presented as a suggestion, not objective
+   fact.
+
+## Resume Experience
+
+The resume view is the primary product experience. It should show:
+
+- observed state
+- derived workflow status
+- pending interpretations
+- optional suggestion
+
+The central question remains:
+
+> What is waiting for whom?
+
+The answer should be supported by evidence, such as:
+
+```yaml
+derived_workflow:
+  likely_waiting_for: user
+  confidence: high
+  evidence:
+    - kind: event
+      ref: agent_turn_completed
+    - kind: event
+      ref: file_changes_observed
+    - kind: snapshot
+      ref: validation.status
+      value: not_observed
+```
+
+This evidence shape is conceptual. It distinguishes event evidence from snapshot
+evidence without defining the final persisted schema.
+
+## Proposal Behavior
+
+Objective events should be recorded automatically when observed. Deterministic
+snapshot updates should be calculated automatically. Neither should require
+immediate user confirmation.
+
+Proposals are only for uncertain interpretations. In spike mode, immediate
+confirmation may be used to measure precision and recall. In product mode,
+confirmation should be batched at workflow boundaries or during `resume`.
+
+Immediate interruption should be reserved for conflicts, ambiguity that blocks
+correlation, or high-risk state changes.
+
+## Manual Repair
+
+Manual input remains necessary when capture is missing, incomplete, or wrong.
+Repair adds corrective information or overrides. It must not silently rewrite or
+delete observed event history.

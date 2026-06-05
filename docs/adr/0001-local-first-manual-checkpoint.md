@@ -2,21 +2,25 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR 0004](0004-automatic-event-capture-as-core-requirement.md).
 
-## Decision
+## Original Decision
 
-WorkState starts as a local-first tool with manual checkpointing.
+WorkState started as a local-first tool with manual checkpointing.
 
-## Rationale
+## Updated Interpretation
 
-The first product problem is workflow recovery, not automation coverage. Manual
-checkpointing lets the user record the current work item, phase, waiting actor,
-next action, and planning context without depending on GitHub, CI, Git, or AI
-agent scraping.
+Manual checkpointing remains useful as fallback and repair, but it is not the
+intended primary UX.
+
+The current product contract requires automatic workflow event capture where
+integrations permit. Manual input should add missing context, corrective
+information, or overrides when capture is unavailable, incomplete, ambiguous, or
+wrong.
 
 ## Consequences
 
-- WorkState can support local-only repositories from the start.
-- Checkpoints may be incomplete if the user does not update them.
-- External adapters can be added later without changing the core model.
+- Local-first recovery remains a core requirement.
+- Manual checkpoints are no longer the MVP's primary workflow.
+- Observed event history, repository snapshots, derived workflow state, and
+  batched interpretation confirmation define the current product direction.

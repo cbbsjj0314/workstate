@@ -2,20 +2,23 @@
 
 ## Status
 
-Accepted
+Accepted as an early inspectability preference. The final persisted schema and
+storage format must still be validated during M0 and M1.
 
 ## Decision
 
-WorkState starts with YAML/JSON storage before SQLite.
+WorkState may use YAML/JSON for early examples, spikes, or local-first
+inspection before introducing SQLite or another storage approach.
 
 ## Rationale
 
-The MVP needs a small, inspectable checkpoint format. YAML/JSON keeps early
-state easy to read, edit, diff, and review while the product contract is still
-being validated.
+The product contract is still being validated. Human-readable examples keep the
+model easy to inspect, edit, diff, and review while WorkState tests automatic
+event capture, repository snapshots, derived workflow state, and repair flows.
 
 ## Consequences
 
-- Early checkpoints remain transparent and local-first.
-- Advanced querying is deferred.
-- SQLite can be introduced later if checkpoint volume or query needs justify it.
+- Conceptual examples can remain transparent and local-first.
+- YAML/JSON examples do not define the final persisted schema.
+- SQLite or another storage approach can be introduced later if M0/M1 validation
+  justifies it.
