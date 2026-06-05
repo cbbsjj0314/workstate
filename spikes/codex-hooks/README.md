@@ -195,7 +195,7 @@ codex-cli 0.137.0
 - Raw-field inspection found none of these persisted raw fields: `prompt`,
   `last_assistant_message`, `tool_input`, `tool_response`, `transcript`,
   `transcript_path`, or `command`.
-- Both tested turns ended normally, and no hook-caused interruption was
+- All observed test turns ended normally, and no hook-caused interruption was
   observed.
 
 ### Unmet Expectation / Limitation
