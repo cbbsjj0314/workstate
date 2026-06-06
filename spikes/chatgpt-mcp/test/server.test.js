@@ -382,6 +382,52 @@ describe("HTTP bounded-exposure behavior", () => {
     assert.equal(server.headersTimeout, limits.headersTimeoutMs);
   });
 
+  it("ignores HOST environment changes and binds to 127.0.0.1", async () => {
+    const previousHost = process.env.HOST;
+    process.env.HOST = "0.0.0.0";
+    let isolatedServer;
+
+    try {
+      isolatedServer = await startServer({ port: 0, handler: (_req, res) => res.end("ok") });
+      const address = isolatedServer.address();
+      assert.equal(typeof address, "object");
+      assert.equal(address.address, "127.0.0.1");
+    } finally {
+      if (isolatedServer) {
+        await new Promise((resolve) => isolatedServer.close(resolve));
+      }
+      if (previousHost === undefined) {
+        delete process.env.HOST;
+      } else {
+        process.env.HOST = previousHost;
+      }
+    }
+  });
+
+  it("rejects an explicit non-loopback host", () => {
+    assert.throws(
+      () => startServer({ host: "0.0.0.0", port: 0, handler: (_req, res) => res.end("ok") }),
+      /server host must be 127\.0\.0\.1/,
+    );
+  });
+
+  it("accepts explicit 127.0.0.1 with ephemeral port 0", async () => {
+    const isolatedServer = await startServer({
+      host: "127.0.0.1",
+      port: 0,
+      handler: (_req, res) => res.end("ok"),
+    });
+
+    try {
+      const address = isolatedServer.address();
+      assert.equal(typeof address, "object");
+      assert.equal(address.address, "127.0.0.1");
+      assert.notEqual(address.port, 0);
+    } finally {
+      await new Promise((resolve) => isolatedServer.close(resolve));
+    }
+  });
+
   it("returns human-readable health only at GET /", async () => {
     const response = await fetch(`${baseUrl}/`);
     assert.equal(response.status, 200);

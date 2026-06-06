@@ -333,7 +333,11 @@ export function createHttpHandler(options = {}) {
 }
 
 export function startServer(options = {}) {
-  const host = options.host ?? process.env.HOST ?? DEFAULT_HOST;
+  const host = options.host ?? DEFAULT_HOST;
+  if (host !== DEFAULT_HOST) {
+    throw new Error(`server host must be ${DEFAULT_HOST}`);
+  }
+
   const port = Number(options.port ?? process.env.PORT ?? DEFAULT_PORT);
   const handler = options.handler ?? createHttpHandler(options);
   const server = http.createServer(handler);
@@ -352,8 +356,10 @@ export function startServer(options = {}) {
 async function main() {
   const server = await startServer();
   const address = server.address();
-  const port = typeof address === "object" && address ? address.port : DEFAULT_PORT;
-  console.log(`${SERVER_NAME} listening on http://${DEFAULT_HOST}:${port}`);
+  if (!address || typeof address === "string") {
+    throw new Error("server did not bind to a TCP address");
+  }
+  console.log(`${SERVER_NAME} listening on http://${address.address}:${address.port}`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
