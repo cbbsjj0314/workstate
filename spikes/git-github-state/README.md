@@ -443,7 +443,65 @@ limitations:
 
 ## Live Verification Result
 
-Live verification is pending completion of branch publication, draft PR
-creation, and CI. The pre-publication run will be recorded together with those
-results so the final conclusion distinguishes local feasibility, live GitHub
-observation, and environment-specific limitations.
+Status:
+
+```text
+partial
+```
+
+Test environment:
+
+```text
+tested_date: 2026-06-06
+git_version: 2.54.0
+gh_version: 2.92.0
+implementation_branch: spike/git-github-state-collection
+draft_pr: 10
+```
+
+Reproducible observations:
+
+- Before publication, the collector returned exit `0`, normalized the local
+  implementation branch and dirty working-tree counts, and preserved those
+  local results when GitHub collection was unavailable.
+- After the branch was pushed, the collector returned exit `0`, reported the
+  configured upstream, zero locally known ahead/behind counts, and a clean
+  working tree.
+- After draft PR creation, the same local result remained stable.
+- In all three repository runs, the required
+  `gh auth status --active --hostname github.com` preflight returned nonzero in
+  this execution environment. The collector returned
+  `github.status: unavailable` with `reason_code: gh_not_authenticated`, did
+  not attempt later GitHub stages, and did not expose raw authentication
+  output.
+- A temporary committed local-only repository returned exit `0`, normalized a
+  clean `main` branch, and returned GitHub
+  `not_applicable/no_remote`.
+- Direct missing-target and bare-repository runs returned structured JSON and
+  exit `2`.
+- Automated validation completed with 80 Python tests and 21 ChatGPT MCP tests
+  passing. Fixtures covered published/unpublished/unknown branch state,
+  SHA-based PR association, and all check buckets without live network access.
+
+Independent GitHub observation confirmed that the implementation branch was
+published and draft PR `#10` existed. That observation came from the
+implementation workflow, not from collector output, and is not counted as
+collector-level GitHub success.
+
+Privacy inspection found no changed filenames, diff content, raw remote URLs,
+credentials, tokens, account details, token scopes, keyring information, raw
+authentication output, raw stderr, command lines, PR bodies, comments, review
+text, CI logs, or local absolute paths in committed examples or recorded
+results.
+
+Conclusion:
+
+- Local Git collection feasibility, structured exit codes, privacy behavior,
+  and preservation of local evidence during GitHub unavailability were
+  demonstrated.
+- Fixture coverage demonstrated the GitHub normalization and correlation logic.
+- Live collection of branch publication, draft PR state, and check buckets was
+  not demonstrated because the required active-account `gh` preflight was not
+  available in this execution environment.
+- The spike result is partial rather than proof of complete live GitHub polling
+  feasibility.
