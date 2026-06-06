@@ -463,46 +463,58 @@ source_code
 repository_contents
 ```
 
-## Result-Recording Template
+## Live Verification Result
 
 ChatGPT live verification status:
 
 ```text
-pending
+completed
 ```
 
 Outcome:
 
 ```text
-Pending live ChatGPT web test.
+Outcome C: The app connected and tools were discovered, but invocation was unreliable.
 ```
 
-After testing, select exactly one:
+Test environment:
 
 ```text
-Outcome A: Connection, read invocation, and write invocation succeeded.
-Outcome B: Connection and read invocation succeeded, but write invocation was unavailable or blocked.
-Outcome C: The app connected and tools were discovered, but invocation was unreliable.
-Outcome D: The custom app could not connect or tools could not be discovered.
+tested_chatgpt_plan: Plus
+tested_date: 2026-06-06
+connection_method: temporary Cloudflare Quick Tunnel
+authentication: none
+local_mcp_binding: 127.0.0.1
 ```
 
 Evidence:
 
 ```text
-tested_chatgpt_plan:
-tested_date:
-connection_and_discovery:
-explicit_read:
-explicit_write:
-indirect_relevant:
-negative_control:
-privacy_inspection:
-observed_duplicate_behavior:
-final_outcome:
+connection_and_discovery: The temporary tunnel was reachable. GET / returned HTTP 200 and "workstate-chatgpt-mcp-capability-probe ok". The custom app connected and advertised tools were available in the conversation.
+explicit_read: health_check succeeded, ChatGPT displayed ok: true, no unexpected confirmation was observed, and no JSONL record was expected or written.
+explicit_write: For probe_plus_direct_01 with scenario direct, no confirmation or approval UI appeared. ChatGPT reported that an OpenAI safety check blocked the requested synthetic observation. The write did not execute and the JSONL record count remained 0.
+indirect_relevant: For probe_plus_indirect_01 with scenario indirect, ChatGPT selected the appropriate write behavior. The write succeeded with duplicate: false and exactly one JSONL record was persisted. Confirmation status was not explicitly observed.
+negative_control: ChatGPT answered the unrelated prompt normally. No health_check or record_observation call was observed and the JSONL record count remained 1.
+privacy_inspection: record_count: 1; forbidden_raw_fields: none. The persisted record contained only normalized schema_version, recorded_at, source, tool_name, record_id, probe_id, scenario, and marker fields.
+observed_duplicate_behavior: The successful indirect write returned duplicate: false. No duplicate write was observed in the live test.
+final_outcome: Outcome C: The app connected and tools were discovered, but invocation was unreliable.
 ```
 
-Do not claim ChatGPT Plus read or write capability until this live web test is
-complete.
+The explicit write result above records only the response observed from
+ChatGPT. Repository evidence does not establish the exact internal platform
+component or policy responsible for the reported block.
+
+ChatGPT Plus successfully connected to the custom MCP app, invoked the
+read-only tool, and completed one indirect write invocation. However, a
+semantically similar explicit write request was blocked before execution, so
+reliable write-tool invocation was not demonstrated.
+
+This demonstrates custom MCP connection, read invocation, and at least one
+write invocation. It does not demonstrate reliable or predictable write
+invocation. Write-confirmation behavior was not conclusively characterized,
+because confirmation status for the successful indirect write was not
+explicitly observed. This result also does not establish that a production
+WorkState ChatGPT adapter would be reliable.
 
 ## Shutdown And Cleanup
 
@@ -517,7 +529,14 @@ After testing:
 
 ## Known Limitations
 
-- Live ChatGPT capability is pending until the user performs the web test.
+- The completed live test demonstrates connection, read invocation, and one
+  indirect write invocation, but not reliable or predictable write invocation.
+- Write-confirmation behavior remains inconclusive because confirmation status
+  was not explicitly recorded for the successful indirect write.
+- The explicit write block is an observed ChatGPT response; this repository
+  does not prove which internal platform component or policy caused it.
+- A single ChatGPT Plus test on 2026-06-06 does not establish production
+  WorkState ChatGPT adapter reliability or future platform behavior.
 - MCP Inspector validates local protocol behavior only.
 - Idempotency and serialized write guarantees are process-local only.
 - The JSONL shape is provisional and scoped to this spike.
