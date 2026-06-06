@@ -1,0 +1,19 @@
+{
+  "name": "workstate-chatgpt-mcp-probe",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Synthetic WorkState ChatGPT MCP capability probe.",
+  "engines": {
+    "node": ">=22.7.5"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check lib/storage.js && node --check test/server.test.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "zod": "4.4.3"
+  }
+}

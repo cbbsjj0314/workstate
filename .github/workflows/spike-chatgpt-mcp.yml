@@ -1,0 +1,32 @@
+name: Spike ChatGPT MCP
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  spike-chatgpt-mcp:
+    name: Validate ChatGPT MCP spike
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: spikes/chatgpt-mcp/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --prefix spikes/chatgpt-mcp
+
+      - name: Run syntax checks
+        run: npm run check --prefix spikes/chatgpt-mcp
+
+      - name: Run tests
+        run: npm test --prefix spikes/chatgpt-mcp
