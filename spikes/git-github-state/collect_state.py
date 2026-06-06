@@ -21,6 +21,7 @@ GH_AUTH_TIMEOUT = 5
 GH_NETWORK_TIMEOUT = 15
 KNOWN_CHECK_BUCKETS = {"pass", "fail", "pending", "skipping", "cancel"}
 CHECK_PRECEDENCE = ("fail", "pending", "cancel", "pass", "skipping")
+PR_STATES = {"OPEN", "CLOSED", "MERGED"}
 PR_FIELDS = (
     "number,state,isDraft,headRefName,headRefOid,isCrossRepository,"
     "headRepositoryOwner,baseRefName,reviewDecision,mergeable,"
@@ -353,16 +354,21 @@ def correlate_pull_request(
     for candidate in candidates:
         if not isinstance(candidate, dict):
             raise CollectorError("invalid_json")
+        head_ref_name = candidate.get("headRefName")
+        if not isinstance(head_ref_name, str) or not head_ref_name:
+            raise CollectorError("invalid_json")
+        if head_ref_name != branch_name:
+            continue
         owner_data = candidate.get("headRepositoryOwner")
         login = owner_data.get("login") if isinstance(owner_data, dict) else None
         if (
-            candidate.get("headRefName") != branch_name
-            or candidate.get("isCrossRepository") is not False
+            candidate.get("isCrossRepository") is not False
             or not isinstance(login, str)
             or not login
             or login.casefold() != owner.casefold()
         ):
             continue
+        normalize_pr(candidate)
         correlatable.append(candidate)
 
     open_matches = [
@@ -393,18 +399,18 @@ def correlate_pull_request(
 
 
 def normalize_pr(candidate: dict[str, Any]) -> dict[str, Any]:
-    required = {
-        "number": int,
-        "state": str,
-        "isDraft": bool,
-        "headRefName": str,
-        "baseRefName": str,
-    }
-    for field, expected_type in required.items():
-        if not isinstance(candidate.get(field), expected_type):
-            raise CollectorError("invalid_json")
-    if isinstance(candidate["number"], bool):
+    number = candidate.get("number")
+    if not isinstance(number, int) or isinstance(number, bool) or number <= 0:
         raise CollectorError("invalid_json")
+    if candidate.get("state") not in PR_STATES or not isinstance(candidate.get("isDraft"), bool):
+        raise CollectorError("invalid_json")
+    for field in ("headRefName", "baseRefName"):
+        if not isinstance(candidate.get(field), str) or not candidate[field]:
+            raise CollectorError("invalid_json")
+    for field in ("reviewDecision", "mergeable", "mergeStateStatus"):
+        value = candidate.get(field)
+        if value is not None and (not isinstance(value, str) or not value):
+            raise CollectorError("invalid_json")
     return {
         "status": "observed",
         "number": candidate["number"],
@@ -520,6 +526,8 @@ def collect_github(git_state: dict[str, Any], repo_root: Path, runner: CommandRu
             ["gh", "repo", "view", repository_name, "--json", "nameWithOwner,defaultBranchRef"],
             GH_NETWORK_TIMEOUT,
         )
+    except CommandMissing:
+        return unavailable_github("gh_not_installed")
     except CommandTimedOut:
         return unavailable_github("command_timeout")
     if repo_result.returncode != 0:
@@ -567,6 +575,10 @@ def collect_github(git_state: dict[str, Any], repo_root: Path, runner: CommandRu
     ]
     try:
         branch_result = gh(graphql_argv, GH_NETWORK_TIMEOUT)
+    except CommandMissing:
+        github["status"] = "partial"
+        github["failures"].append(safe_failure("branch_lookup", "gh_not_installed"))
+        return github
     except CommandTimedOut:
         github["status"] = "partial"
         github["failures"].append(safe_failure("branch_lookup", "command_timeout"))
@@ -602,6 +614,10 @@ def collect_github(git_state: dict[str, Any], repo_root: Path, runner: CommandRu
     ]
     try:
         pr_result = gh(pr_argv, GH_NETWORK_TIMEOUT)
+    except CommandMissing:
+        github["status"] = "partial"
+        github["failures"].append(safe_failure("pull_request_lookup", "gh_not_installed"))
+        return github
     except CommandTimedOut:
         github["status"] = "partial"
         github["failures"].append(safe_failure("pull_request_lookup", "command_timeout"))
@@ -649,6 +665,10 @@ def collect_github(git_state: dict[str, Any], repo_root: Path, runner: CommandRu
     ]
     try:
         checks_result = gh(checks_argv, GH_NETWORK_TIMEOUT)
+    except CommandMissing:
+        github["status"] = "partial"
+        github["failures"].append(safe_failure("checks_lookup", "gh_not_installed"))
+        return github
     except CommandTimedOut:
         github["status"] = "partial"
         github["failures"].append(safe_failure("checks_lookup", "command_timeout"))
@@ -667,13 +687,13 @@ def collect_github(git_state: dict[str, Any], repo_root: Path, runner: CommandRu
     return github
 
 
-def error_document(target: str, reason_code: str) -> dict[str, Any]:
+def error_document(reason_code: str, *, git_available: bool | None) -> dict[str, Any]:
     return {
         "schema_version": SCHEMA_VERSION,
         "collected_at": utc_now(),
         "repo_root": None,
         "collector": {"status": "error", "reason_code": reason_code},
-        "git": {"available": reason_code != "git_not_installed", "is_repository": False},
+        "git": {"available": git_available, "is_repository": False},
         "github": unavailable_github("local_git_unavailable"),
     }
 
@@ -682,15 +702,15 @@ def collect(target_text: str, runner: CommandRunner | None = None) -> tuple[dict
     runner = runner or CommandRunner()
     target = Path(target_text).expanduser()
     if not target.exists():
-        return error_document(target_text, "missing_target"), 2
+        return error_document("missing_target", git_available=None), 2
     if not target.is_dir():
-        return error_document(target_text, "non_directory_target"), 2
+        return error_document("non_directory_target", git_available=None), 2
     target = target.resolve()
     try:
         git_state, repo_root = collect_git(target, runner)
     except CollectorError as exc:
         exit_code = 1 if exc.reason_code in {"git_not_installed", "git_timeout", "git_invalid_output"} else 2
-        return error_document(target_text, exc.reason_code), exit_code
+        return error_document(exc.reason_code, git_available=exc.reason_code != "git_not_installed"), exit_code
     github_state = collect_github(git_state, repo_root, runner)
     return {
         "schema_version": SCHEMA_VERSION,
@@ -705,14 +725,14 @@ def collect(target_text: str, runner: CommandRunner | None = None) -> tuple[dict
 def main(argv: Sequence[str] | None = None) -> int:
     args = list(argv if argv is not None else sys.argv[1:])
     if len(args) != 1:
-        document = error_document("", "invalid_arguments")
+        document = error_document("invalid_arguments", git_available=None)
         print(json.dumps(document, indent=2, sort_keys=True, ensure_ascii=True))
         print("collector: invalid_arguments", file=sys.stderr)
         return 2
     try:
         document, exit_code = collect(args[0])
     except Exception:
-        document = error_document(args[0], "unexpected_failure")
+        document = error_document("unexpected_failure", git_available=None)
         exit_code = 1
     print(json.dumps(document, indent=2, sort_keys=True, ensure_ascii=True))
     if exit_code:

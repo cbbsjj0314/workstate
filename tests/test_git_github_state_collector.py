@@ -235,6 +235,30 @@ class PullRequestCorrelationTest(unittest.TestCase):
         with self.assertRaisesRegex(collector.CollectorError, "invalid_branch_state"):
             self.correlate([pr_candidate(state="MERGED", headRefOid="a" * 40)], branch_status="unknown", remote_sha=None)
 
+    def test_malformed_normalized_pr_scalars_are_rejected(self):
+        malformed = {
+            "number": (0, -1, True, "12"),
+            "state": ("UNKNOWN", 1, None),
+            "headRefName": ("", None, [], 1),
+            "baseRefName": ("", None, {}, False),
+            "reviewDecision": ({}, [], 1, True, ""),
+            "mergeable": ({}, [], 1, False, ""),
+            "mergeStateStatus": ({}, [], 1, True, ""),
+        }
+        for field, values in malformed.items():
+            for value in values:
+                with self.subTest(field=field, value=value):
+                    with self.assertRaisesRegex(collector.CollectorError, "invalid_json"):
+                        collector.normalize_pr(pr_candidate(**{field: value}))
+
+    def test_nullable_pr_scalars_are_accepted(self):
+        normalized = collector.normalize_pr(
+            pr_candidate(reviewDecision=None, mergeable=None, mergeStateStatus=None)
+        )
+        self.assertIsNone(normalized["review_decision"])
+        self.assertIsNone(normalized["mergeable"])
+        self.assertIsNone(normalized["merge_state_status"])
+
 
 class CheckParserTest(unittest.TestCase):
     def parse(self, buckets):
@@ -418,6 +442,54 @@ class GitHubOrchestrationTest(unittest.TestCase):
         self.assertEqual(state["status"], "unavailable")
         self.assertEqual(state["failures"], [])
 
+    def assert_command_missing_preserves_local_git(self, stage, overrides, *, branch_ref=None, prs=None):
+        git_state = github_git_state()
+        runner = self.runner_for(branch_ref=branch_ref, prs=prs, overrides=overrides)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo_root = Path(tmpdir)
+            with mock.patch.object(collector, "collect_git", return_value=(git_state, repo_root)):
+                document, exit_code = collector.collect(str(repo_root), runner)
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(document["git"], git_state)
+        if stage == "repository_metadata":
+            self.assertEqual(document["github"]["status"], "unavailable")
+            self.assertEqual(document["github"]["reason_code"], "gh_not_installed")
+            self.assertEqual(document["github"]["failures"], [])
+        else:
+            self.assertEqual(document["github"]["status"], "partial")
+            self.assertIsNone(document["github"]["reason_code"])
+            self.assertEqual(
+                document["github"]["failures"],
+                [{"stage": stage, "reason_code": "gh_not_installed"}],
+            )
+
+    def test_command_missing_during_repository_metadata_preserves_local_git(self):
+        self.assert_command_missing_preserves_local_git(
+            "repository_metadata",
+            {("gh", "repo", "view"): collector.CommandMissing()},
+        )
+
+    def test_command_missing_during_branch_lookup_preserves_local_git(self):
+        self.assert_command_missing_preserves_local_git(
+            "branch_lookup",
+            {("gh", "api", "graphql"): collector.CommandMissing()},
+        )
+
+    def test_command_missing_during_pull_request_lookup_preserves_local_git(self):
+        self.assert_command_missing_preserves_local_git(
+            "pull_request_lookup",
+            {("gh", "pr", "list"): collector.CommandMissing()},
+            branch_ref={"target": {"oid": "b" * 40}},
+        )
+
+    def test_command_missing_during_checks_lookup_preserves_local_git(self):
+        self.assert_command_missing_preserves_local_git(
+            "checks_lookup",
+            {("gh", "pr", "checks"): collector.CommandMissing()},
+            branch_ref={"target": {"oid": "b" * 40}},
+            prs=[pr_candidate()],
+        )
+
     def test_pr_query_failure_is_partial_not_none(self):
         runner = self.runner_for(
             branch_ref=None,
@@ -426,6 +498,30 @@ class GitHubOrchestrationTest(unittest.TestCase):
         state = collector.collect_github(github_git_state(), Path("/synthetic/repo"), runner)
         self.assertEqual(state["status"], "partial")
         self.assertEqual(state["pull_request"]["status"], "unknown")
+
+    def test_malformed_pr_scalars_become_safe_lookup_failure(self):
+        malformed = {
+            "number": 0,
+            "state": "UNKNOWN",
+            "headRefName": "",
+            "baseRefName": [],
+            "reviewDecision": {},
+            "mergeable": 1,
+            "mergeStateStatus": False,
+        }
+        for field, value in malformed.items():
+            with self.subTest(field=field):
+                runner = self.runner_for(
+                    branch_ref={"target": {"oid": "b" * 40}},
+                    prs=[pr_candidate(**{field: value})],
+                )
+                state = collector.collect_github(github_git_state(), Path("/synthetic/repo"), runner)
+                self.assertEqual(state["status"], "partial")
+                self.assertEqual(state["pull_request"], {"status": "unknown"})
+                self.assertEqual(
+                    state["failures"],
+                    [{"stage": "pull_request_lookup", "reason_code": "invalid_json"}],
+                )
 
     def test_detached_unborn_no_remote_and_unsupported_are_not_applicable(self):
         cases = []
@@ -566,19 +662,71 @@ class RealGitIntegrationTest(unittest.TestCase):
         document, exit_code = collector.collect(str(bare))
         self.assertEqual(exit_code, 2)
         self.assertEqual(document["collector"]["reason_code"], "bare_git_repository")
+        self.assertIs(document["git"]["available"], True)
         non_git = Path(self.temp.name) / "plain"
         non_git.mkdir()
         document, exit_code = collector.collect(str(non_git))
         self.assertEqual(exit_code, 2)
         self.assertEqual(document["collector"]["reason_code"], "not_git_repository")
+        self.assertIs(document["git"]["available"], True)
 
     def test_missing_and_non_directory_targets(self):
         document, exit_code = collector.collect(str(Path(self.temp.name) / "missing"))
         self.assertEqual((exit_code, document["collector"]["reason_code"]), (2, "missing_target"))
+        self.assertIsNone(document["git"]["available"])
         file_target = Path(self.temp.name) / "file"
         file_target.write_text("x", encoding="utf-8")
         document, exit_code = collector.collect(str(file_target))
         self.assertEqual((exit_code, document["collector"]["reason_code"]), (2, "non_directory_target"))
+        self.assertIsNone(document["git"]["available"])
+
+
+class ErrorDocumentTest(unittest.TestCase):
+    def test_git_availability_contract(self):
+        cases = {
+            "missing_target": None,
+            "non_directory_target": None,
+            "git_not_installed": False,
+            "not_git_repository": True,
+            "bare_git_repository": True,
+            "not_work_tree": True,
+            "git_timeout": True,
+            "git_invalid_output": True,
+        }
+        for reason_code, expected in cases.items():
+            with self.subTest(reason_code=reason_code):
+                document = collector.error_document(reason_code, git_available=expected)
+                self.assertIs(document["git"]["available"], expected)
+
+    def test_collect_derives_git_availability_after_invocation(self):
+        scenarios = [
+            (collector.CommandMissing(), "git_not_installed", False, 1),
+            (result(["git"], returncode=128), "not_git_repository", True, 2),
+            (collector.CommandTimedOut(), "git_timeout", True, 1),
+            (result(["git"], stdout=b"unexpected\n"), "git_invalid_output", True, 1),
+        ]
+        for response, reason_code, available, exit_code in scenarios:
+            with self.subTest(reason_code=reason_code):
+                runner = FakeRunner(lambda call, response=response: response)
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    document, actual_exit = collector.collect(tmpdir, runner)
+                self.assertEqual(actual_exit, exit_code)
+                self.assertEqual(document["collector"]["reason_code"], reason_code)
+                self.assertIs(document["git"]["available"], available)
+
+    def test_collect_not_work_tree_reports_git_available(self):
+        responses = iter(
+            [
+                result(["git"], stdout=b"false\n"),
+                result(["git"], stdout=b"false\n"),
+            ]
+        )
+        runner = FakeRunner(lambda call: next(responses))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            document, exit_code = collector.collect(tmpdir, runner)
+        self.assertEqual(exit_code, 2)
+        self.assertEqual(document["collector"]["reason_code"], "not_work_tree")
+        self.assertIs(document["git"]["available"], True)
 
 
 class ProcessSafetyTest(unittest.TestCase):
@@ -598,7 +746,7 @@ class ProcessSafetyTest(unittest.TestCase):
         self.assertEqual(kwargs["env"]["LC_ALL"], "C")
 
     def test_deterministic_json_has_one_document_and_trailing_newline(self):
-        document = collector.error_document("", "fixture")
+        document = collector.error_document("fixture", git_available=None)
         rendered = json.dumps(document, indent=2, sort_keys=True, ensure_ascii=True) + "\n"
         self.assertEqual(json.loads(rendered)["collector"]["reason_code"], "fixture")
         self.assertTrue(rendered.endswith("\n"))

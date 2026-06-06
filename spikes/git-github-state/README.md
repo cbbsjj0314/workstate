@@ -208,6 +208,18 @@ boundaries; they are never returned or persisted. Ahead/behind values reflect
 local remote-tracking refs and may be stale because the collector never
 fetches.
 
+For structured error documents, `git.available` reflects only observed command
+availability:
+
+```text
+missing or non-directory target: null
+git executable missing:          false
+Git command invoked:             true
+```
+
+This keeps path-validation failures from claiming that Git was available when
+no Git command ran.
+
 ## Remote Sanitization
 
 HTTPS, `ssh://`, and scp-style `github.com` remotes may produce only:
@@ -260,7 +272,10 @@ Repository metadata contains only `name_with_owner` and `default_branch`.
 Pull-request data contains only number, state, draft status, head/base refs,
 review decision, mergeability, merge-state status, and a locally constructed
 canonical URL. Bodies, comments, reviews, commits, files, and logs are not
-requested.
+requested. Before emission, the PR number must be a positive non-boolean
+integer, state must be `OPEN`, `CLOSED`, or `MERGED`, head/base refs must be
+non-empty strings, and review/merge scalar fields must be null or non-empty
+strings. Malformed command output becomes a safe `invalid_json` stage failure.
 
 For pinned `gh 2.92.0`, `gh pr checks --json bucket` is accepted only when it
 exits `0` and returns a JSON array containing known buckets:
