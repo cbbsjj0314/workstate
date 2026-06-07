@@ -455,9 +455,15 @@ limitations:
 - Multiple unrelated GitHub identities can remain ambiguous.
 - `mergeable` and `mergeStateStatus` may temporarily be unknown.
 - GitHub permissions can limit observable repository or ref state.
-- The active-account preflight may report unavailable in an environment where
-  `gh` cannot access its authenticated account, even when another GitHub client
-  can access the repository.
+- In the Codex execution environment used during the earlier live run,
+  `gh auth status --active --hostname github.com` returned nonzero because that
+  environment could not access the user's normal `gh` credentials. The
+  collector correctly preserved local Git evidence and returned structured
+  GitHub unavailability. The same collector later completed the full GitHub
+  path in the user's normal authenticated terminal, so this is an
+  execution-environment credential-availability limitation rather than a
+  failure of normal user-terminal capability. GitHub collection is not assumed
+  to work inside every Codex execution environment.
 - The check exporter contract is pinned to `gh 2.92.0`.
 
 ## Live Verification Result
@@ -465,13 +471,14 @@ limitations:
 Status:
 
 ```text
-partial
+completed
 ```
 
 Test environment:
 
 ```text
-tested_date: 2026-06-06
+tested_date: 2026-06-07
+execution_context: normal authenticated user terminal
 git_version: 2.54.0
 gh_version: 2.92.0
 implementation_branch: spike/git-github-state-collection
@@ -487,12 +494,27 @@ Reproducible observations:
   configured upstream, zero locally known ahead/behind counts, and a clean
   working tree.
 - After draft PR creation, the same local result remained stable.
-- In all three repository runs, the required
-  `gh auth status --active --hostname github.com` preflight returned nonzero in
-  this execution environment. The collector returned
-  `github.status: unavailable` with `reason_code: gh_not_authenticated`, did
-  not attempt later GitHub stages, and did not expose raw authentication
-  output.
+- On 2026-06-07, the collector was rerun from the user's normal authenticated
+  terminal on the synchronized implementation branch and returned exit `0`
+  with `collector.status: ok` and `collector.reason_code: null`.
+- Local Git reported branch `spike/git-github-state-collection`, a clean working
+  tree, configured upstream `origin/spike/git-github-state-collection`, and
+  ahead/behind `0/0`.
+- Local HEAD was `b689e091e3fbd2ab7e28fbfb789edb8b18bb49bd`.
+  The sanitized GitHub identity was `github.com` and
+  `cbbsjj0314/workstate`.
+- GitHub collection returned `github.status: ok`, `github.reason_code: null`,
+  and `github.failures: []`. Repository default branch `main` and branch
+  publication status `published` were observed.
+- The observed remote branch SHA was
+  `b689e091e3fbd2ab7e28fbfb789edb8b18bb49bd`, exactly matching local HEAD.
+- Same-repository branch and SHA evidence associated PR `#10` as `OPEN` and
+  draft with head `spike/git-github-state-collection` and base `main`.
+  Pinned `gh 2.92.0` returned `reviewDecision: ""`, which was correctly
+  normalized to `review_decision: null`; `mergeable` was `MERGEABLE` and
+  `mergeStateStatus` was `CLEAN`.
+- Completed checks were normalized as `status: observed`, `overall: pass`,
+  `pass: 3`, and zero `fail`, `pending`, `skipping`, and `cancel` buckets.
 - A temporary committed local-only repository returned exit `0`, normalized a
   clean `main` branch, and returned GitHub
   `not_applicable/no_remote`.
@@ -502,11 +524,6 @@ Reproducible observations:
   passing. Fixtures covered published/unpublished/unknown branch state,
   SHA-based PR association, and all check buckets without live network access.
 
-Independent GitHub observation confirmed that the implementation branch was
-published and draft PR `#10` existed. That observation came from the
-implementation workflow, not from collector output, and is not counted as
-collector-level GitHub success.
-
 Privacy inspection found no changed filenames, diff content, raw remote URLs,
 credentials, tokens, account details, token scopes, keyring information, raw
 authentication output, raw stderr, command lines, PR bodies, comments, review
@@ -515,12 +532,15 @@ results.
 
 Conclusion:
 
-- Local Git collection feasibility, structured exit codes, privacy behavior,
-  and preservation of local evidence during GitHub unavailability were
-  demonstrated.
-- Fixture coverage demonstrated the GitHub normalization and correlation logic.
-- Live collection of branch publication, draft PR state, and check buckets was
-  not demonstrated because the required active-account `gh` preflight was not
-  available in this execution environment.
-- The spike result is partial rather than proof of complete live GitHub polling
-  feasibility.
+- Local Git collection, sanitized GitHub repository identity, remote branch
+  publication and SHA collection, matching local and remote SHAs,
+  same-repository PR association through branch and SHA evidence, open/draft PR
+  state, and completed CI bucket normalization were demonstrated.
+- Structured GitHub failure behavior had already demonstrated preservation of
+  local Git evidence when GitHub was unavailable.
+- The read-only collector successfully normalized local Git state, GitHub
+  repository and branch publication state, a SHA-correlated draft pull request,
+  and completed CI check buckets in a real authenticated user terminal
+  environment.
+- No final WorkState runtime, persisted schema, workflow inference, or
+  recommendation logic was implemented.
