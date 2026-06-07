@@ -8,7 +8,7 @@ on:
 
 jobs:
   spike-python:
-    name: Validate Codex hooks spike
+    name: Validate Python spikes
     runs-on: ubuntu-latest
 
     steps:
