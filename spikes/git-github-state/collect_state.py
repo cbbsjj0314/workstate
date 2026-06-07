@@ -407,7 +407,12 @@ def normalize_pr(candidate: dict[str, Any]) -> dict[str, Any]:
     for field in ("headRefName", "baseRefName"):
         if not isinstance(candidate.get(field), str) or not candidate[field]:
             raise CollectorError("invalid_json")
-    for field in ("reviewDecision", "mergeable", "mergeStateStatus"):
+    review_decision = candidate.get("reviewDecision")
+    if review_decision is not None and not isinstance(review_decision, str):
+        raise CollectorError("invalid_json")
+    if review_decision == "":
+        review_decision = None
+    for field in ("mergeable", "mergeStateStatus"):
         value = candidate.get(field)
         if value is not None and (not isinstance(value, str) or not value):
             raise CollectorError("invalid_json")
@@ -418,7 +423,7 @@ def normalize_pr(candidate: dict[str, Any]) -> dict[str, Any]:
         "is_draft": candidate["isDraft"],
         "head_ref": candidate["headRefName"],
         "base_ref": candidate["baseRefName"],
-        "review_decision": candidate.get("reviewDecision"),
+        "review_decision": review_decision,
         "mergeable": candidate.get("mergeable"),
         "merge_state_status": candidate.get("mergeStateStatus"),
         "status_check_rollup": candidate.get("statusCheckRollup"),

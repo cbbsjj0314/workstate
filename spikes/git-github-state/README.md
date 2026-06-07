@@ -273,9 +273,13 @@ Pull-request data contains only number, state, draft status, head/base refs,
 review decision, mergeability, merge-state status, and a locally constructed
 canonical URL. Bodies, comments, reviews, commits, files, and logs are not
 requested. Before emission, the PR number must be a positive non-boolean
-integer, state must be `OPEN`, `CLOSED`, or `MERGED`, head/base refs must be
-non-empty strings, and review/merge scalar fields must be null or non-empty
-strings. Malformed command output becomes a safe `invalid_json` stage failure.
+integer, state must be `OPEN`, `CLOSED`, or `MERGED`, and head/base refs must be
+non-empty strings. For pinned `gh 2.92.0`, `reviewDecision` may be an empty
+string when no review decision exists; the collector normalizes both `""` and
+null to `review_decision: null`. A non-empty review decision string is
+preserved. `mergeable` and `mergeStateStatus` remain limited to null or a
+non-empty string. Malformed command output becomes a safe `invalid_json` stage
+failure.
 
 For pinned `gh 2.92.0`, `gh pr checks --json bucket` is accepted only when it
 exits `0` and returns a JSON array containing known buckets:
@@ -494,7 +498,7 @@ Reproducible observations:
   `not_applicable/no_remote`.
 - Direct missing-target and bare-repository runs returned structured JSON and
   exit `2`.
-- Automated validation completed with 80 Python tests and 21 ChatGPT MCP tests
+- Automated validation completed with 92 Python tests and 21 ChatGPT MCP tests
   passing. Fixtures covered published/unpublished/unknown branch state,
   SHA-based PR association, and all check buckets without live network access.
 

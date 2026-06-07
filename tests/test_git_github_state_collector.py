@@ -241,7 +241,7 @@ class PullRequestCorrelationTest(unittest.TestCase):
             "state": ("UNKNOWN", 1, None),
             "headRefName": ("", None, [], 1),
             "baseRefName": ("", None, {}, False),
-            "reviewDecision": ({}, [], 1, True, ""),
+            "reviewDecision": ({}, [], 1, True),
             "mergeable": ({}, [], 1, False, ""),
             "mergeStateStatus": ({}, [], 1, True, ""),
         }
@@ -251,7 +251,13 @@ class PullRequestCorrelationTest(unittest.TestCase):
                     with self.assertRaisesRegex(collector.CollectorError, "invalid_json"):
                         collector.normalize_pr(pr_candidate(**{field: value}))
 
-    def test_nullable_pr_scalars_are_accepted(self):
+    def test_review_decision_normalization(self):
+        for value, expected in (("", None), (None, None), ("APPROVED", "APPROVED")):
+            with self.subTest(value=value):
+                normalized = collector.normalize_pr(pr_candidate(reviewDecision=value))
+                self.assertEqual(normalized["review_decision"], expected)
+
+    def test_nullable_merge_scalars_are_accepted(self):
         normalized = collector.normalize_pr(
             pr_candidate(reviewDecision=None, mergeable=None, mergeStateStatus=None)
         )
@@ -363,6 +369,47 @@ class GitHubOrchestrationTest(unittest.TestCase):
         self.assertEqual(state["pull_request"]["status"], "observed")
         self.assertEqual(state["checks"]["overall"], "pending")
         self.assertEqual((state["status"], state["reason_code"], state["failures"]), ("ok", None, []))
+
+    def test_real_pr_10_payload_normalizes_empty_review_decision_and_collects_checks(self):
+        sha = "190c91b80b5835cf8cafde0e2b66aa9f4672d67f"
+        git_state = github_git_state(
+            branch="spike/git-github-state-collection",
+            head_sha=sha,
+            remotes=[
+                {
+                    "name": "origin",
+                    "github": {"host": "github.com", "name_with_owner": "cbbsjj0314/workstate"},
+                }
+            ],
+        )
+        candidate = pr_candidate(
+            number=10,
+            state="OPEN",
+            isDraft=True,
+            headRefName="spike/git-github-state-collection",
+            headRefOid=sha,
+            headRepositoryOwner={"login": "cbbsjj0314"},
+            baseRefName="main",
+            reviewDecision="",
+            mergeable="MERGEABLE",
+            mergeStateStatus="CLEAN",
+            statusCheckRollup=[{"__typename": "CheckRun"}] * 3,
+        )
+        runner = self.runner_for(
+            branch_ref={"target": {"oid": sha}},
+            prs=[candidate],
+            checks=[{"bucket": "pass"}, {"bucket": "pass"}, {"bucket": "pass"}],
+        )
+
+        state = collector.collect_github(git_state, Path("/synthetic/repo"), runner)
+
+        self.assertEqual(state["pull_request"]["status"], "observed")
+        self.assertEqual(state["pull_request"]["number"], 10)
+        self.assertEqual(state["pull_request"]["state"], "OPEN")
+        self.assertIs(state["pull_request"]["is_draft"], True)
+        self.assertIsNone(state["pull_request"]["review_decision"])
+        self.assertTrue(any(call["argv"][:3] == ["gh", "pr", "checks"] for call in runner.calls))
+        self.assertEqual(state["checks"]["status"], "observed")
 
     def test_ref_null_enables_historical_local_sha_correlation(self):
         historical = pr_candidate(state="MERGED", headRefOid="a" * 40, statusCheckRollup=[])
