@@ -21,7 +21,7 @@ ChatGPT, Codex, Git, GitHub, CI는 중요한 integration 대상이지만 adapter
 
 WorkState는 네 계층을 분리한다.
 
-1. Observed event
+1. Observed events
 
    integration 또는 local tool에서 직접 수집한 사실이다.
 
@@ -52,7 +52,7 @@ WorkState는 네 계층을 분리한다.
 
 3. Derived workflow state
 
-   event와 snapshot에서 추론한 workflow 의미이다. `likely_waiting_for`는 provenance, evidence, confidence, interpretation status를 포함하는 derived value이다.
+   event와 snapshot에서 추론한 workflow 의미이다. `likely_waiting_for`는 derived value이며, derived workflow state는 provenance, evidence, confidence, interpretation status를 함께 제공한다.
 
 4. Optional recommendation
 

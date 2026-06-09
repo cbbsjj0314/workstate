@@ -4,7 +4,7 @@ WorkState의 MVP 방향은 integration이 허용하는 범위에서 workflow를 
 
 현재 repository에는 product contract만 있다. 아직 integration 또는 runtime CLI를 구현하지 않았다.
 
-## M0: Integration feasibility spike
+## M0: Integration feasibility spikes
 
 M0에서는 의도한 capture model이 실용적인지 검증한다.
 
@@ -29,7 +29,7 @@ M0 실험에서는 precision과 recall을 측정하기 위해 transition마다 �
 
 M1은 여러 repository에서 사용할 수 있어야 한다.
 
-M1에는 최소한 다음 항목을 포함한다.
+M1은 최소한 다음 항목을 포함한다.
 
 - observed event history를 위한 검증된 local storage 방식
 - repository snapshot

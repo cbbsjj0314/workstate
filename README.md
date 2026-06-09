@@ -31,7 +31,7 @@ WorkState는 사용자가 다음 정보를 복구할 수 있도록 해야 한다
 
 WorkState는 다음 네 계층을 분리한다.
 
-- observed event: integration 또는 local tool에서 수집한 객관적 사실
+- observed events: integration 또는 local tool에서 수집한 객관적 사실
 - repository snapshot: 결정론적으로 계산한 현재 repository 상태
 - derived workflow state: evidence와 confidence를 바탕으로 추론한 workflow 의미
 - optional recommendation: 객관적 사실이 아닌 제안된 next action
