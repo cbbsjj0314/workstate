@@ -1,36 +1,31 @@
-# Workflow Model
+# Workflow 모델
 
-WorkState models repo-level workflow recovery across N repositories.
+WorkState는 N개 repository의 repository 단위 workflow 복구를 모델링한다.
 
-The intended product behavior is automatic capture of observable workflow events
-where integrations permit. M0 has not yet validated those integrations, so this
-document describes the product contract, not current implementation capability.
+의도한 제품 동작은 integration이 허용하는 범위에서 관찰 가능한 workflow event를 자동으로 수집하는 것이다. M0에서는 아직 이러한 integration을 검증하지 않았으므로, 이 문서는 현재 구현 기능이 아니라 product contract를 설명한다.
 
-## Actors And Adapters
+## Actor와 adapter
 
-The core model remains adapter-agnostic.
+핵심 모델은 특정 adapter에 종속되지 않는다.
 
-- `user`: the human operator deciding and approving work.
-- `planning_session`: ChatGPT today; a generic planning actor/session in future
-  workflow profiles.
-- `ai_agent`: Codex today, or another delegated AI agent later.
-- `ci`: automated checks when a workflow uses CI.
-- `reviewer`: a human or process responsible for review.
-- `external_system`: any non-core system that may provide an observable signal.
+- `user`: 작업을 결정하고 승인하는 human operator이다.
+- `planning_session`: 현재는 ChatGPT이며, 향후 workflow profile에서는 일반적인 planning actor 또는 session이다.
+- `ai_agent`: 현재는 Codex이며, 향후에는 다른 delegated AI agent일 수 있다.
+- `ci`: workflow에서 CI를 사용하는 경우의 automated check이다.
+- `reviewer`: review를 담당하는 사람 또는 process이다.
+- `external_system`: 관찰 가능한 signal을 제공할 수 있는 모든 non-core system이다.
 
-ChatGPT, Codex, Git, GitHub, and CI are important intended integrations, but
-they are adapters. The core event model must not be permanently locked to those
-tools.
+ChatGPT, Codex, Git, GitHub, CI는 중요한 integration 대상이지만 adapter이다. 핵심 event model을 이러한 tool에 영구적으로 종속해서는 안 된다.
 
-## Model Layers
+## 모델 계층
 
-WorkState separates four layers.
+WorkState는 네 계층을 분리한다.
 
-1. Observed events
+1. Observed event
 
-   Facts directly captured from integrations or local tools.
+   integration 또는 local tool에서 직접 수집한 사실이다.
 
-   Examples:
+   예시는 다음과 같다.
 
    - `planning_prompt_created`
    - `agent_prompt_submitted`
@@ -49,40 +44,34 @@ WorkState separates four layers.
    - `ci_failed`
    - `agent_reported_complete`
 
-   Event names should describe observations, not semantic success. For example,
-   prefer `file_changes_observed` over `local_changes_applied`, and keep
-   `agent_reported_complete` separate from validation or work-item completion.
+   event name은 의미상 성공이 아니라 관찰한 사실을 나타내야 한다. 예를 들어 `file_changes_observed`를 `local_changes_applied`보다 선호하고, `agent_reported_complete`는 validation 또는 work-item completion과 구분해야 한다.
 
 2. Repository snapshot
 
-   A deterministic summary of current repository state calculated from observed
-   facts and local/tool inspection. Snapshot values are not events. For example,
-   `validation_not_observed` is a snapshot value, not an event.
+   observed fact와 local/tool inspection으로 계산한 현재 repository 상태의 결정론적 요약이다. snapshot value는 event가 아니다. 예를 들어 `validation_not_observed`는 event가 아니라 snapshot value이다.
 
 3. Derived workflow state
 
-   Workflow meaning inferred from events and snapshots. `likely_waiting_for` is
-   derived, with provenance, evidence, confidence, and interpretation status.
+   event와 snapshot에서 추론한 workflow 의미이다. `likely_waiting_for`는 provenance, evidence, confidence, interpretation status를 포함하는 derived value이다.
 
 4. Optional recommendation
 
-   A suggested next action. It must be presented as a suggestion, not objective
-   fact.
+   제안된 next action이다. 객관적 사실이 아니라 제안으로 표시해야 한다.
 
-## Resume Experience
+## Resume 경험
 
-The resume view is the primary product experience. It should show:
+resume view는 주된 제품 경험이다. 다음 항목을 표시해야 한다.
 
 - observed state
 - derived workflow status
-- pending interpretations
+- 확인 대기 중인 해석
 - optional suggestion
 
-The central question remains:
+핵심 질문은 다음과 같다.
 
-> What is waiting for whom?
+> 무엇이 누구의 처리를 기다리고 있는가? (`What is waiting for whom?`)
 
-The answer should be supported by evidence, such as:
+답은 다음과 같은 evidence로 뒷받침해야 한다.
 
 ```yaml
 derived_workflow:
@@ -98,24 +87,16 @@ derived_workflow:
       value: not_observed
 ```
 
-This evidence shape is conceptual. It distinguishes event evidence from snapshot
-evidence without defining the final persisted schema.
+이 evidence shape는 conceptual이다. 최종 persisted schema를 정의하지 않으면서 event evidence와 snapshot evidence를 구분한다.
 
-## Proposal Behavior
+## Proposal 동작
 
-Objective events should be recorded automatically when observed. Deterministic
-snapshot updates should be calculated automatically. Neither should require
-immediate user confirmation.
+객관적 event는 관찰될 때 자동으로 기록해야 한다. 결정론적인 snapshot update는 자동으로 계산해야 한다. 어느 쪽도 즉각적인 사용자 확인을 요구해서는 안 된다.
 
-Proposals are only for uncertain interpretations. In spike mode, immediate
-confirmation may be used to measure precision and recall. In product mode,
-confirmation should be batched at workflow boundaries or during `resume`.
+proposal은 불확실한 interpretation에만 사용한다. spike mode에서는 precision과 recall을 측정하기 위해 즉시 확인을 사용할 수 있다. product mode에서는 workflow boundary 또는 `resume` 시점에 확인을 일괄 처리해야 한다.
 
-Immediate interruption should be reserved for conflicts, ambiguity that blocks
-correlation, or high-risk state changes.
+즉각적인 interruption은 충돌, correlation을 막는 모호함 또는 high-risk state change가 있는 경우에만 사용해야 한다.
 
-## Manual Repair
+## Manual repair
 
-Manual input remains necessary when capture is missing, incomplete, or wrong.
-Repair adds corrective information or overrides. It must not silently rewrite or
-delete observed event history.
+capture가 누락되거나 불완전하거나 잘못된 경우에는 수동 입력이 여전히 필요하다. repair는 corrective information 또는 override를 추가한다. observed event history를 암묵적으로 다시 쓰거나 삭제해서는 안 된다.
