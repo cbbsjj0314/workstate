@@ -1,24 +1,19 @@
-# ADR 0003: YAML/JSON Before SQLite
+# ADR 0003: SQLite보다 YAML/JSON 우선
 
-## Status
+## 상태
 
-Accepted as an early inspectability preference. The final persisted schema and
-storage format must still be validated during M0 and M1.
+초기 inspectability를 위한 선호로 Accepted 상태이다. final persisted schema와 storage format은 M0와 M1에서 계속 검증해야 한다.
 
-## Decision
+## 결정
 
-WorkState may use YAML/JSON for early examples, spikes, or local-first
-inspection before introducing SQLite or another storage approach.
+WorkState는 SQLite 또는 다른 storage 방식을 도입하기 전에 초기 example, spike 또는 local-first inspection에 YAML/JSON을 사용할 수 있다.
 
-## Rationale
+## 근거
 
-The product contract is still being validated. Human-readable examples keep the
-model easy to inspect, edit, diff, and review while WorkState tests automatic
-event capture, repository snapshots, derived workflow state, and repair flows.
+product contract는 아직 validation 중이다. 사람이 읽을 수 있는 example을 사용하면 WorkState가 automatic event capture, repository snapshot, derived workflow state, repair flow를 검증하는 동안 모델을 쉽게 inspect, edit, diff, review할 수 있다.
 
-## Consequences
+## 결과
 
-- Conceptual examples can remain transparent and local-first.
-- YAML/JSON examples do not define the final persisted schema.
-- SQLite or another storage approach can be introduced later if M0/M1 validation
-  justifies it.
+- conceptual example은 투명성과 local-first 특성을 유지할 수 있다.
+- YAML/JSON example은 final persisted schema를 정의하지 않는다.
+- M0/M1 validation 결과로 필요성이 확인되면 나중에 SQLite 또는 다른 storage 방식을 도입할 수 있다.
