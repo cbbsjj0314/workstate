@@ -1,27 +1,25 @@
 # Event And Snapshot Model
 
-This document is the canonical conceptual data-model contract for WorkState.
+이 문서는 WorkState의 canonical conceptual data-model contract이다.
 
-It does not define a final production schema, enum set, migration format,
-event-store implementation, immutability mechanism, replay architecture, or
-persistence format. Those details must be validated during M0 and M1.
+이 문서는 final production schema, enum set, migration format, event-store implementation, immutability mechanism, replay architecture, persistence format을 정의하지 않는다. 이러한 세부 사항은 M0와 M1에서 검증해야 한다.
 
 ## Layers
 
-WorkState separates:
+WorkState는 다음 layer를 구분한다.
 
 - observed events
 - repository snapshots
 - derived workflow state
 - optional recommendations
 
-Facts and interpretations are separate layers.
+Fact와 interpretation은 서로 다른 layer이다.
 
 ## Observed Events
 
-An observed event is a fact directly captured from an integration or local tool.
+Observed event는 integration 또는 local tool에서 직접 포착한 objective fact이다.
 
-Examples:
+예:
 
 - `planning_prompt_created`
 - `agent_prompt_submitted`
@@ -40,22 +38,19 @@ Examples:
 - `ci_failed`
 - `agent_reported_complete`
 
-Use objective names. Avoid names that imply semantic success when only an
-observation occurred.
+Objective name을 사용해야 한다. Observation만 발생했는데 semantic success를 암시하는 name은 피해야 한다.
 
-Naming rules:
+Naming 규칙:
 
-- prefer `file_changes_observed` over `local_changes_applied`
-- prefer `plan_output_observed` unless an integration provides an authoritative
-  plan-completed event
-- keep `agent_reported_complete` separate from validation success or work-item
-  completion
+- `file_changes_observed`를 `local_changes_applied`보다 우선한다.
+- integration이 authoritative plan-completed event를 제공하지 않는 한 `plan_output_observed`를 우선한다.
+- `agent_reported_complete`는 validation success 또는 work-item completion과 구분한다.
 
 ## Repository Snapshot
 
-A repository snapshot is a deterministic summary of current repository state.
+Repository snapshot은 현재 repository state의 deterministic summary이며 event가 아니다.
 
-Conceptual example:
+Conceptual example은 다음과 같다.
 
 ```yaml
 working_tree:
@@ -80,14 +75,13 @@ execution:
   last_event: agent_turn_completed
 ```
 
-`validation_not_observed` is a snapshot value, not an event.
+`validation_not_observed`는 event가 아니라 snapshot value이다.
 
 ## Derived Workflow State
 
-Derived workflow state is workflow meaning calculated from observed events and
-snapshots.
+Derived workflow state는 observed events와 repository snapshots에서 계산한 workflow 의미이다.
 
-Conceptual example:
+Conceptual example은 다음과 같다.
 
 ```yaml
 derived_workflow:
@@ -106,13 +100,11 @@ derived_workflow:
   interpretation_status: inferred
 ```
 
-`likely_waiting_for` remains an important product concept, but it is derived. It
-must not be treated as an objective source-of-truth field.
+`likely_waiting_for`는 중요한 product concept이지만 derived value이다. Objective source-of-truth field로 취급해서는 안 된다.
 
-The evidence shape above is conceptual. It distinguishes event evidence from
-snapshot evidence without defining the final persisted schema.
+위 evidence shape은 conceptual example이다. Final persisted schema를 정의하지 않으면서 event evidence와 snapshot evidence를 구분한다.
 
-Derived state must expose:
+Derived state는 다음 정보를 노출해야 한다.
 
 - provenance
 - evidence
@@ -121,37 +113,32 @@ Derived state must expose:
 
 ## Provenance And Interpretation Status
 
-Use these terms precisely:
+다음 term을 정확하게 사용해야 한다.
 
-- `observed`: an event directly captured from an integration or local tool
-- `inferred`: a workflow interpretation derived from evidence
-- `confirmed`: an inferred interpretation accepted by the user
-- `overridden`: an inferred or previously confirmed interpretation corrected by
-  the user
+- `observed`: integration 또는 local tool에서 직접 포착한 event
+- `inferred`: evidence에서 도출한 workflow interpretation
+- `confirmed`: user가 수락한 inferred interpretation
+- `overridden`: user가 수정한 inferred interpretation 또는 previously confirmed interpretation
 
-Observed facts do not transition into `confirmed` or `overridden`.
-Interpretations can be inferred, confirmed, or overridden. Correcting an
-interpretation records corrective information additively and does not erase the
-supporting observed events.
+Observed fact는 `confirmed` 또는 `overridden`으로 transition하지 않는다. Interpretation은 inferred, confirmed, overridden 상태가 될 수 있다. Interpretation correction은 corrective information을 additively 기록하며 supporting observed events를 삭제하지 않는다.
 
 ## Proposal Behavior
 
-Proposals are only for uncertain interpretations.
+Proposal은 uncertain interpretation에만 사용한다.
 
-- Objective events should be recorded automatically when observed.
-- Deterministic snapshot updates should be calculated automatically.
-- Uncertain semantic interpretations create proposals.
-- Product-mode confirmation is batched at workflow boundaries or during
-  `resume`.
-- Spike-mode immediate confirmation may be used to measure precision and recall.
+- Objective event는 관찰되면 자동으로 기록해야 한다.
+- Deterministic snapshot update는 자동으로 계산해야 한다.
+- Uncertain semantic interpretation은 proposal을 생성한다.
+- Product-mode confirmation은 workflow boundary 또는 `resume` 중에 batch 처리한다.
+- Spike-mode immediate confirmation은 precision과 recall을 측정하는 데 사용할 수 있다.
 
-Unconfirmed proposals must be visible during `resume`.
+Unconfirmed proposal은 `resume` 중에 보여야 한다.
 
 ## Optional Recommendation
 
-WorkState may suggest a next action, but must not present it as objective fact.
+WorkState는 next action을 제안할 수 있지만 이를 objective fact로 제시해서는 안 된다.
 
-Conceptual example:
+Conceptual example은 다음과 같다.
 
 ```yaml
 recommendation:
@@ -160,38 +147,32 @@ recommendation:
   confidence: medium
 ```
 
-WorkState does not replace the user, reviewer, or coding agent in deciding
-whether a plan is good, changes satisfy the requirement, code quality is
-acceptable, more revisions are needed, a PR should be merged, or a work item is
-truly complete.
+WorkState는 plan의 적절성, change의 requirement 충족 여부, code quality의 수용 가능 여부, 추가 revision 필요 여부, PR merge 여부, work item의 실제 완료 여부를 결정하는 user, reviewer, coding agent의 판단을 대체하지 않는다.
 
 ## Handoff Correlation
 
-A stable handoff ID can correlate related events across tools:
+Stable handoff ID는 여러 tool의 related event를 correlate할 수 있다.
 
 ```text
 WorkState-Handoff-ID: ws_01J...
 ```
 
-Its purpose is to connect observations such as:
+목적은 다음과 같은 observation을 연결하는 것이다.
 
 ```text
 ChatGPT: revision prompt created
 Codex: revision prompt received
 ```
 
-The visible header is acceptable for an M0 spike. The final UX should pass this
-metadata automatically where possible. The user should not manually manage
-handoff IDs.
+Visible header는 M0 spike에서 허용된다. Final UX는 가능한 경우 이 metadata를 자동으로 전달해야 한다. User가 handoff ID를 직접 관리해서는 안 된다.
 
-A random stable ID is preferred over relying only on content hashes. Raw prompt
-content should not be required for correlation.
+Content hash에만 의존하는 방식보다 random stable ID가 권장된다. Correlation에 raw prompt content가 필요해서는 안 된다.
 
-This document does not define the final wire protocol.
+이 문서는 final wire protocol을 정의하지 않는다.
 
 ## Privacy Defaults
 
-Default persisted data should be limited to:
+Default persisted data는 다음 항목으로 제한해야 한다.
 
 - event type
 - repository identity
@@ -201,5 +182,4 @@ Default persisted data should be limited to:
 - content hash or local HMAC where useful
 - short redacted summary
 
-Raw ChatGPT or Codex prompt content should be opt-in. WorkState should not store
-credentials, secrets, or full source code by default.
+Raw ChatGPT 또는 Codex prompt content는 opt-in이어야 한다. WorkState는 credentials, secrets, full source code를 기본적으로 저장해서는 안 된다.
