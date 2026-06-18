@@ -1,58 +1,47 @@
 # CLI Contract
 
-This document defines intended commands only. It does not define or implement a
-runtime CLI.
+이 문서는 의도한 command만 정의한다. runtime CLI를 정의하거나 구현하지 않는다.
 
-The CLI should support automatic capture where integrations permit, but current
-integration capability has not been implemented or validated yet.
+CLI는 integration이 허용하는 범위에서 automatic capture를 지원해야 한다. 그러나 현재 integration capability는 아직 구현되거나 검증되지 않았다.
 
 ## `workstate resume`
 
-Show the primary multi-repo resume view.
+기본 multi-repo `resume` view를 표시한다.
 
-The view should answer:
+이 view는 다음 질문에 답해야 한다.
 
 > What is waiting for whom?
 
-The answer is derived from observed events and repository snapshots. The view
-should show observed state, derived workflow status, pending interpretations,
-and optional suggestions.
+답은 observed events와 repository snapshots에서 도출한다. 이 view는 observed state, derived workflow status, pending interpretations, optional suggestions를 구분해 표시해야 한다.
 
 ## `workstate status`
 
-Show the current repository snapshot and derived workflow state for one
-repository or all repositories.
+하나의 repository 또는 모든 repositories에 대한 현재 repository snapshot과 derived workflow state를 표시한다.
 
 ## `workstate events`
 
-Show recent observed events for one repository or all repositories.
+하나의 repository 또는 모든 repositories에 대한 최근 observed events를 표시한다.
 
-This command should help explain why a derived interpretation exists. It should
-not imply that event capture is complete before M0 validates integrations.
+이 command는 derived interpretation이 존재하는 이유를 설명하는 데 도움을 줘야 한다. M0에서 integrations를 검증하기 전에 event capture가 완전하다고 암시해서는 안 된다.
 
 ## `workstate inspect`
 
-Inspect the evidence behind a derived state, pending interpretation, or
-recommendation.
+derived state, pending interpretation, recommendation의 근거를 검사한다.
 
 ## `workstate confirm`
 
-Accept or reject pending interpretations.
+pending interpretations를 승인하거나 거부한다.
 
-Confirming an interpretation does not change observed facts. Rejection or
-correction records interpretation status and corrective information.
+interpretation을 confirm해도 observed facts는 변경되지 않는다. 거부 또는 수정은 interpretation status와 corrective information을 기록한다.
 
 ## `workstate repair`
 
-Add corrective information, missing context, or overrides when automatic capture
-is missing, incomplete, ambiguous, or wrong.
+automatic capture가 누락되거나 불완전하거나 모호하거나 잘못된 경우 corrective information, missing context, overrides를 추가한다.
 
-Repair must not silently rewrite or delete observed event history.
+이 command는 observed event history를 조용히 다시 쓰거나 삭제해서는 안 된다.
 
 ## `workstate checkpoint`
 
-Optional manual capture fallback.
+선택적인 manual capture fallback이다.
 
-This command may record a user-supplied checkpoint when automatic capture is not
-available or when a workflow needs manual repair. It is not the normal primary
-workflow.
+automatic capture를 사용할 수 없거나 workflow에 manual repair가 필요할 때 이 command는 user-supplied checkpoint를 기록할 수 있다. 이는 일반적인 primary workflow가 아니다.
