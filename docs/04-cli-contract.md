@@ -1,6 +1,6 @@
 # CLI Contract
 
-이 문서는 의도한 command만 정의한다. Runtime CLI를 정의하거나 구현하지 않는다.
+이 문서는 의도한 command만 정의한다. runtime CLI를 정의하거나 구현하지 않는다.
 
 CLI는 integration이 허용하는 범위에서 automatic capture를 지원해야 한다. 그러나 현재 integration capability는 아직 구현되거나 검증되지 않았다.
 
