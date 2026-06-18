@@ -63,6 +63,8 @@ The core model must remain adapter-agnostic.
 
 Use Korean for durable owner-facing documentation whose primary purpose is human understanding, judgment, planning, or operation.
 
+For detailed documentation style guidance, see `docs/documentation-style.md`.
+
 This normally includes:
 
 - project overview and problem definition
