@@ -137,8 +137,10 @@ For Python spike changes:
 
 ```sh
 python3 -m json.tool .codex/hooks.json >/dev/null
-python3 -m compileall spikes tests
-python3 -m unittest discover -s tests -p 'test_*.py' -v
+PYTHONPYCACHEPREFIX="${TMPDIR:-/tmp}/workstate-pycache" \
+  python3 -m compileall spikes tests
+PYTHONPYCACHEPREFIX="${TMPDIR:-/tmp}/workstate-pycache" \
+  python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
 For the ChatGPT MCP spike:

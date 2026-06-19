@@ -20,7 +20,7 @@ jobs:
           set -euo pipefail
 
           mapfile -t files < <(
-            git ls-files README.md 'docs/**' 'examples/**'
+            git ls-files AGENTS.md '.github/*.md' '.github/**/*.md' README.md 'docs/**' 'examples/**'
           )
 
           if ((${#files[@]} == 0)); then
@@ -73,6 +73,9 @@ jobs:
               [
                   "git",
                   "ls-files",
+                  "AGENTS.md",
+                  ".github/*.md",
+                  ".github/**/*.md",
                   "README.md",
                   "docs/*.md",
                   "docs/**/*.md",
