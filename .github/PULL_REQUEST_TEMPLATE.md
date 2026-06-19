@@ -106,7 +106,11 @@ Repository의 주요 GitHub Actions check:
 
 예:
 - `git diff --check`: passed
-- `PYTHONPYCACHEPREFIX="${TMPDIR:-/tmp}/workstate-pycache" python3 -m unittest discover -s tests -p 'test_*.py' -v`: passed
+- Python tests: passed
+  ```sh
+  PYTHONPYCACHEPREFIX="${TMPDIR:-/tmp}/workstate-pycache" \
+    python3 -m unittest discover -s tests -p 'test_*.py' -v
+  ```
 - changed docs reread: passed
 - `Validate docs and examples`: passed
 - runtime tests: not run, docs-only change
