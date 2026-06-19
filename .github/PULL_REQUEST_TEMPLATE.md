@@ -71,10 +71,10 @@ Product contract, architecture invariant, event/snapshot model, CLI semantics, p
 
 ## Contract impact
 
-- Affected contract:
-- Semantic change: Yes / No
-- Compatibility or migration impact:
-- Canonical reference:
+- 영향받는 contract:
+- 의미 변경: Yes / No
+- 호환성 또는 migration 영향:
+- canonical reference:
 
 ---
 
@@ -86,9 +86,9 @@ Feasibility spike, external integration probe, dogfooding 결과 또는 불확�
 
 ## Evidence / Limitations
 
-- Confirmed:
-- Not demonstrated:
-- Test environment or relevant versions:
+- 확인된 사항:
+- 입증하지 못한 사항:
+- test 환경 또는 관련 version:
 
 ---
 
@@ -106,7 +106,11 @@ Repository의 주요 GitHub Actions check:
 
 예:
 - `git diff --check`: passed
-- `python3 -m unittest discover -s tests -p 'test_*.py' -v`: passed
+- Python tests: passed
+  ```sh
+  PYTHONPYCACHEPREFIX="${TMPDIR:-/tmp}/workstate-pycache" \
+    python3 -m unittest discover -s tests -p 'test_*.py' -v
+  ```
 - changed docs reread: passed
 - `Validate docs and examples`: passed
 - runtime tests: not run, docs-only change
@@ -124,9 +128,9 @@ Repository의 주요 GitHub Actions check:
 
 ## Review focus / Risks
 
-- Review focus:
-- Risk: Low / Medium / High
-- Assumptions or caveats:
+- review 중점:
+- 위험도: Low / Medium / High
+- 가정 또는 주의 사항:
 
 ---
 
