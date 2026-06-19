@@ -1,8 +1,8 @@
-# Conceptual WorkState dogfooding example.
-# This file demonstrates the intended hierarchy, not a final persisted schema.
-# The final schema will be validated during M0 and M1 implementation.
-# Three repositories are shown because that is a current dogfooding example.
-# WorkState supports N repositories; this file must not be treated as a limit.
+# WorkState dogfooding을 위한 개념적 예시이다.
+# 이 파일은 최종 persisted schema가 아니라 의도한 hierarchy를 보여준다.
+# 최종 schema는 M0와 M1 구현 과정에서 검증한다.
+# 현재 dogfooding 예시이므로 세 개의 repository를 표시한다.
+# WorkState는 N개의 repository를 지원하며, 이 파일을 세 개의 repository로 제한된다고 해석해서는 안 된다.
 
 version: 1
 repositories:
