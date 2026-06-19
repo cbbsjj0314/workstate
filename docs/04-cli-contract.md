@@ -2,7 +2,7 @@
 
 이 문서는 의도한 command만 정의한다. runtime CLI를 정의하거나 구현하지 않는다.
 
-CLI는 integration이 허용하는 범위에서 automatic capture를 지원해야 한다. 그러나 현재 integration capability는 아직 구현되거나 검증되지 않았다.
+CLI는 integration이 허용하는 범위에서 automatic capture를 지원해야 한다. 초기 M0 feasibility spike에서 Codex lifecycle capture, ChatGPT MCP, read-only Git/GitHub collection에 관한 mixed evidence를 확보했지만 production integration capability와 runtime CLI는 구현되지 않았다. 이 문서의 command는 여전히 conceptual contract이며 실행 가능한 runtime command가 아니다.
 
 ## `workstate resume`
 

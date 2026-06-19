@@ -2,7 +2,7 @@
 
 WorkState는 N개 repository의 repository 단위 workflow 복구를 모델링한다.
 
-의도한 제품 동작은 integration이 허용하는 범위에서 관찰 가능한 workflow event를 자동으로 수집하는 것이다. M0에서는 아직 이러한 integration을 검증하지 않았으므로, 이 문서는 현재 구현 기능이 아니라 product contract를 설명한다.
+의도한 제품 동작은 integration이 허용하는 범위에서 관찰 가능한 workflow event를 자동으로 수집하는 것이다. 초기 M0 feasibility spike에서는 mixed evidence가 확인되었다. Codex lifecycle capture는 Plan-mode 식별 limitation과 함께 입증되었고, ChatGPT MCP 결과는 신뢰할 수 있는 write invocation을 입증하지 못한 `Outcome C`이며, Git/GitHub collector는 정상 authenticated terminal 환경에서 입증되었다. 이 문서는 여전히 production 구현 기능이 아니라 product contract를 설명한다.
 
 ## Actor와 adapter
 

@@ -40,7 +40,28 @@ WorkState는 다음 네 계층을 분리한다.
 
 ## 현재 상태
 
-현재 이 repository에는 product contract가 있다. 아직 ChatGPT, Codex, Git, GitHub, CI, event capture, CLI runtime 또는 persistence integration을 구현하지 않았다. 최종 schema와 구현 세부 사항을 확정하기 전에 M0에서 integration feasibility를 검증한다.
+이 repository에는 product contract와 세 가지 초기 M0 feasibility spike 결과가 있다. 이 spike들은 feasibility evidence를 제공하지만 production integration이나 final architecture를 구현한 것은 아니다.
+
+- Codex hooks spike는 Codex lifecycle event capture feasibility를 입증했다. `SessionStart`, `UserPromptSubmit`, `PostToolUse`, `Stop`을 관찰했고 Git repository 외부 JSONL 기록을 입증했다. 그러나 Plan mode 기록도 `permission_mode: default`를 보고했으므로 `permission_mode`를 통한 신뢰할 수 있는 Plan-mode 식별은 입증하지 못했고, hook latency도 정식 benchmark하지 않았다. Plan-mode detection이 해결되지 않아 Issue #5는 open 상태이다.
+- ChatGPT MCP spike는 ChatGPT Plus custom app 연결과 tool discovery, 명시적인 `health_check` read 호출, 한 번의 간접 `record_observation` write 성공을 입증했다. 의미상 유사한 명시적 write는 차단되었다고 보고되었고, 신뢰할 수 있거나 예측 가능한 write invocation은 입증하지 못했다. 최종 결과는 `Outcome C`이며 production WorkState ChatGPT adapter가 아니다.
+- Git/GitHub collector spike는 사용자의 정상 authenticated terminal 환경에서 read-only 수집에 성공했다. local Git state, GitHub repository identity, branch publication state, SHA-correlated draft PR state, completed CI check buckets를 수집했고 GitHub 수집이 unavailable 또는 partial인 경우에도 local Git evidence를 보존했다. Codex execution environment에서는 사용자의 정상 `gh` credentials에 접근할 수 없었지만 이는 정상 user-terminal 수집 실패가 아니라 execution-environment limitation이다. 이 collector는 final runtime collector나 final persisted schema가 아니다.
+
+아직 다음 항목은 구현하지 않았다.
+
+- production runtime CLI
+- final persisted schema
+- event store
+- snapshot materialization runtime
+- derived workflow-state engine
+- inference engine
+- recommendation engine
+- production ChatGPT integration
+- production Codex integration
+- production GitHub polling service
+- multi-repository runtime registry
+- background daemon
+
+의도한 `workstate resume`, `workstate status`, `workstate events`, `workstate inspect`, `workstate confirm`, `workstate repair`, `workstate checkpoint` command는 여전히 conceptual contract이며 실행 가능한 runtime command가 아니다.
 
 ## 문서
 
