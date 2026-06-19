@@ -2,7 +2,7 @@
 
 WorkState의 MVP 방향은 integration이 허용하는 범위에서 workflow를 자동으로 복구하고 manual repair를 항상 제공하는 것이다.
 
-현재 repository에는 product contract만 있다. 아직 integration 또는 runtime CLI를 구현하지 않았다.
+현재 repository에는 product contract와 세 가지 초기 M0 feasibility spike artifact가 있다. Spike는 Codex lifecycle capture, ChatGPT MCP, read-only Git/GitHub collection의 feasibility evidence와 limitation을 기록하지만 production runtime이나 final persisted schema를 구현하지 않는다. Production runtime과 M1 implementation은 현재 repository 상태의 범위 밖이다.
 
 ## M0: Integration feasibility spikes
 
